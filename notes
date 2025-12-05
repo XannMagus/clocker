@@ -1,0 +1,8 @@
+- Add a `TimeLog` struct with a single field `entries: Vec<TimeLogEntry>`
+- Add an impl block for that struct with public methods:
+    - from_file (does basically what `read_logs` does currently)
+    - persist (does basically what `write_logs` does currently)
+    - update, which computes the time variables (now, today, current_time) and then calls the method determine_action and apply_action which both can be private
+- Move this in its own module
+- Move the data structure `TimeLogEntry` to its own submodule of `TimeLog`
+- Depending on the readability, keep the enums `TimeOfDay` and `Action` in the `TimeLog` module or move them to their own submodule

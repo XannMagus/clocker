@@ -107,17 +107,7 @@ fn write_logs(filepath: &String, entries: Vec<TimeLogEntry>) -> Result<(), Box<d
     Ok(())
 }
 
-fn update_log(entries: Vec<TimeLogEntry>) -> Vec<TimeLogEntry> {
-    let now = Local::now();
-    let today = now.date_naive();
-    let current_time = now
-        .time()
-        .with_second(0)
-        .unwrap()
-        .with_nanosecond(0)
-        .unwrap();
-
-    let action = determine_action(&entries, today, current_time);
+fn apply_action(entries: Vec<TimeLogEntry>, action: UpdateAction) -> Vec<TimeLogEntry> {
     match action {
         UpdateAction::NoChange => entries,
         UpdateAction::NewDay(date, time) => entries
@@ -152,7 +142,17 @@ fn main() {
             .unwrap_or(DEFAULT_PATH.to_string()),
     )
     .to_string();
+    let now = Local::now();
+    let today = now.date_naive();
+    let current_time = now
+        .time()
+        .with_second(0)
+        .unwrap()
+        .with_nanosecond(0)
+        .unwrap();
+
     let logs = read_logs(&filename).unwrap();
-    let new_logs = update_log(logs);
+    let action = determine_action(&logs, today, current_time);
+    let new_logs = apply_action(logs, action);
     let _ = write_logs(&filename, new_logs).expect("Problem writing the file");
 }
