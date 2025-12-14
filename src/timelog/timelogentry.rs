@@ -1,6 +1,8 @@
+//! Separates the TimeLogEntry struct from the main TimeLog module
 use serde::{Deserialize, Serialize};
 use chrono::{NaiveDate, NaiveTime};
 
+/// Holds information about a single line of the CSV file
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct TimeLogEntry {
     pub(super) date: NaiveDate,
@@ -15,6 +17,7 @@ pub struct TimeLogEntry {
 }
 
 impl TimeLogEntry {
+    /// Creates a new TimeLogEntry, representing a brand new line in the file
     pub fn new(date: NaiveDate, start_am: NaiveTime) -> Self {
         Self {
             date,
@@ -25,14 +28,17 @@ impl TimeLogEntry {
         }
     }
 
+    /// Sets time for the end of morning
     pub fn set_end_am(&mut self, end_am: NaiveTime) {
         self.end_am = Some(end_am);
     }
 
+    /// Sets time for the start of the afternoon
     pub fn set_start_pm(&mut self, start_pm: NaiveTime) {
         self.start_pm = Some(start_pm);
     }
 
+    /// Sets time for the end of the afternoon
     pub fn set_end_pm(&mut self, end_pm: NaiveTime) {
         self.end_pm = Some(end_pm);
     }
