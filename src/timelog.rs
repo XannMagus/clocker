@@ -1,9 +1,15 @@
+//! Module that groups data structures and logic of the application
+//!
+//! This module contains the main structure used by the application
+//! to hold the state and implements the main logic of the operations
+//!
 use chrono::{Local, NaiveDate, NaiveTime, Timelike};
 use std::{error::Error, fs, io};
 use timelogentry::TimeLogEntry;
 
 mod timelogentry;
 
+/// Holds the different legal times of day to log
 #[derive(Debug)]
 enum TimeOfDay {
     EndAM,
@@ -11,6 +17,7 @@ enum TimeOfDay {
     EndPM,
 }
 
+/// Describes the possible actions to take based on the current state of the file
 #[derive(Debug)]
 enum UpdateAction {
     NewDay(NaiveDate, NaiveTime),
@@ -18,6 +25,7 @@ enum UpdateAction {
     NoChange,
 }
 
+/// Main state structure. Holds information about the time and the existing log entries
 #[derive(Debug)]
 pub struct TimeLog {
     entries: Vec<TimeLogEntry>,
@@ -26,6 +34,7 @@ pub struct TimeLog {
 }
 
 impl TimeLog {
+    /// Loads entries from the file at the given path.
     pub fn from_file(filepath: &String) -> io::Result<Self> {
         if !fs::metadata(&filepath).is_ok() {
             eprintln!("Cannot find file {}", filepath);
@@ -49,6 +58,7 @@ impl TimeLog {
         Ok(Self::new(entries))
     }
 
+    /// Writes the current entries to the given filepath.
     pub fn persist(&self, filepath: &String) -> Result<(), Box<dyn Error>> {
         let file = fs::File::create(filepath).unwrap();
         let mut writer = csv::WriterBuilder::new().flexible(true).from_writer(file);
@@ -59,11 +69,13 @@ impl TimeLog {
         Ok(())
     }
 
+    /// Updates the current entries and returns the result as new TimeLog
     pub fn update(&self) -> Self {
         let action = self.determine_action();
         self.apply_action(action)
     }
 
+    /// Creates a new TimeLog from the given entries. Time and date are set to the current datetime
     fn new(entries: Vec<TimeLogEntry>) -> Self {
         let now = Local::now();
         let today = now.date_naive();
@@ -81,6 +93,7 @@ impl TimeLog {
         }
     }
 
+    /// Decides what action is appropriate based on the current state
     fn determine_action(&self) -> UpdateAction {
         match self.entries.last() {
             None => UpdateAction::NewDay(self.today, self.current_time),
@@ -101,6 +114,7 @@ impl TimeLog {
         }
     }
 
+    /// Applies the given action and returns the result as a new TimeLog
     fn apply_action(&self, action: UpdateAction) -> Self {
         let new_entries = match action {
             UpdateAction::NoChange => self.entries.clone(),
