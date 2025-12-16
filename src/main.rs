@@ -15,7 +15,7 @@ mod timelog;
 /// Version of the app as defined in the Cargo.toml file
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Default path used for input and output files
-const DEFAULT_PATH: &str = "~/horaires.csv";
+const DEFAULT_PATH: &str = "~/timelog.csv";
 
 /// Utility to expand tilde in string path
 fn resolve_path(path: &str) -> String {
