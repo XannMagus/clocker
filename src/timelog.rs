@@ -7,21 +7,15 @@ use chrono::{Local, NaiveDate, NaiveTime, Timelike};
 use std::{error::Error, fs, io, path::Path};
 use timelogentry::TimeLogEntry;
 
-mod timelogentry;
+use crate::timelog::timelogentry::DayState;
 
-/// Holds the different legal times of day to log
-#[derive(Debug)]
-enum TimeOfDay {
-    EndAM,
-    StartPM,
-    EndPM,
-}
+mod timelogentry;
 
 /// Describes the possible actions to take based on the current state of the file
 #[derive(Debug)]
 enum UpdateAction {
     NewDay(NaiveDate, NaiveTime),
-    FillSlot(TimeOfDay, NaiveTime),
+    FillSlot(NaiveTime),
     NoChange,
 }
 
@@ -82,7 +76,7 @@ impl TimeLog {
     }
 
     /// Updates the current entries and returns the result as new TimeLog
-    pub fn update(&self) -> Self {
+    pub fn update(self) -> Self {
         let action = self.determine_action();
         self.apply_action(action)
     }
@@ -113,51 +107,27 @@ impl TimeLog {
                 UpdateAction::NewDay(self.today, self.current_time)
             }
             Some(last_entry) => {
-                if last_entry.end_am.is_none() {
-                    UpdateAction::FillSlot(TimeOfDay::EndAM, self.current_time)
-                } else if last_entry.start_pm.is_none() {
-                    UpdateAction::FillSlot(TimeOfDay::StartPM, self.current_time)
-                } else if last_entry.end_pm.is_none() {
-                    UpdateAction::FillSlot(TimeOfDay::EndPM, self.current_time)
-                } else {
-                    UpdateAction::NoChange
+                match last_entry.state {
+                    DayState::DayFinished(_, _, _, _) => UpdateAction::NoChange,
+                    _ => UpdateAction::FillSlot(self.current_time)
                 }
             }
         }
     }
 
     /// Applies the given action and returns the result as a new TimeLog
-    fn apply_action(&self, action: UpdateAction) -> Self {
-        let new_entries = match action {
-            UpdateAction::NoChange => self.entries.clone(),
-            UpdateAction::NewDay(date, time) => self
-                .entries
-                .iter()
-                .cloned()
-                .chain(std::iter::once(TimeLogEntry::new(date, time)))
-                .collect(),
-            UpdateAction::FillSlot(time_of_day, time) => {
-                let mut new_vec = self.entries.clone();
-                let new_entry = new_vec.last_mut().unwrap();
-                match time_of_day {
-                    TimeOfDay::EndAM => {
-                        new_entry.set_end_am(time);
-                    }
-                    TimeOfDay::StartPM => {
-                        new_entry.set_start_pm(time);
-                    }
-                    TimeOfDay::EndPM => {
-                        new_entry.set_end_pm(time);
-                    }
-                }
-                new_vec
+    fn apply_action(mut self, action: UpdateAction) -> Self {
+        match action {
+            UpdateAction::NewDay(date, time) => {
+                self.entries.push(TimeLogEntry::new(date, time));
             }
-        };
-
-        Self {
-            entries: new_entries,
-            today: self.today,
-            current_time: self.current_time,
+            UpdateAction::FillSlot(time)=> {
+                if let Some(last_entry) = self.entries.last_mut() {
+                    last_entry.transition(time);
+                }
+            }
+            UpdateAction::NoChange => (),
         }
+        self
     }
 }
