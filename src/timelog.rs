@@ -4,7 +4,7 @@
 //! to hold the state and implements the main logic of the operations
 //!
 use chrono::{Local, NaiveDate, NaiveTime, Timelike};
-use std::{error::Error, fs, io};
+use std::{error::Error, fs, io, path::Path};
 use timelogentry::TimeLogEntry;
 
 mod timelogentry;
@@ -35,10 +35,11 @@ pub struct TimeLog {
 
 impl TimeLog {
     /// Loads entries from the file at the given path.
-    pub fn from_file(filepath: &String) -> io::Result<Self> {
+    pub fn from_file<P: AsRef<Path>>(filepath: P) -> io::Result<Self> {
+        let filepath = filepath.as_ref();
         if !fs::metadata(&filepath).is_ok() {
-            eprintln!("Cannot find file {}", filepath);
-            return Ok(Self::new(Vec::new()));
+            eprintln!("Cannot find file {}", filepath.display());
+            return Ok(Self::empty());
         }
 
         let file = fs::File::open(filepath)?;
@@ -58,8 +59,19 @@ impl TimeLog {
         Ok(Self::new(entries))
     }
 
+    /// Creates a new empty TimeLog
+    pub fn empty() -> Self {
+        Self::new(Vec::new())
+    }
+
+    pub fn backup<P: AsRef<Path>>(&self, filepath: P) -> Result<(), Box<dyn Error>> {
+        let backup_path = filepath.as_ref().with_extension("bak");
+        self.persist(&backup_path)
+    }
+
     /// Writes the current entries to the given filepath.
-    pub fn persist(&self, filepath: &String) -> Result<(), Box<dyn Error>> {
+    pub fn persist<P: AsRef<Path>>(&self, filepath: P) -> Result<(), Box<dyn Error>> {
+        let filepath = filepath.as_ref();
         let file = fs::File::create(filepath).unwrap();
         let mut writer = csv::WriterBuilder::new().flexible(true).from_writer(file);
         for entry in self.entries.iter() {
