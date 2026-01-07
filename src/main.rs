@@ -5,12 +5,14 @@
 //! clocker [INPUT_FILE] [OUTPUT_FILE]
 //! ```
 
-use std::{env};
-use std::path::{Path, PathBuf};
 use clap::{Parser, Subcommand};
+use std::env;
+use std::path::{Path, PathBuf};
 
+use crate::error::ClockerError;
 use crate::timelog::TimeLog;
 
+mod error;
 mod timelog;
 
 /// Version of the app as defined in the Cargo.toml file
@@ -47,33 +49,44 @@ fn main() {
     let cli = Cli::parse();
 
     let input_filename = resolve_path(&cli.input_file);
-    let output_filename = cli.output_file.as_deref().map(resolve_path).unwrap_or(input_filename.clone());
+    let output_filename = cli
+        .output_file
+        .as_deref()
+        .map(resolve_path)
+        .unwrap_or(input_filename.clone());
 
-    match cli.command {
+    let result = match cli.command {
         Some(Command::Archive) => archive(&input_filename, &output_filename),
         Some(Command::NewMonth) => new_month(&input_filename, &output_filename),
-        Some(Command::Log)|None => log(&input_filename, &output_filename),
+        Some(Command::Log) | None => log(&input_filename, &output_filename),
     };
+
+    if let Err(error) = result {
+        println!("{}", error);
+    }
 }
 
-fn log<P: AsRef<Path>>(input: P, output: P) {
-    let time_log = TimeLog::from_file(&input).expect(&format!("Couldn't read {}", input.as_ref().display()));
-    let _ = time_log.update().persist(&output).expect("Couldn't write file");
+fn log<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
+    let time_log = TimeLog::from_file(&input)?;
+    let _ = time_log.update()?.persist(&output)?;
+    Ok(())
 }
 
-fn archive<P: AsRef<Path>>(input: P, output: P) {
+fn archive<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
     // 1. daily log
-    let time_log = TimeLog::from_file(&input).expect(&format!("Couldn't read {}", input.as_ref().display()));
+    let time_log = TimeLog::from_file(&input)?;
     // 2. move file to archive
-    let _ = time_log.update().backup(&output).expect("Couldn't write file");
+    let _ = time_log.update()?.backup(&input)?;
     // 3. init new file with empty TimeLog
-    TimeLog::empty().persist(&output).expect("Couldn't write file");
+    TimeLog::empty().persist(&output)?;
+    Ok(())
 }
 
-fn new_month<P: AsRef<Path>>(input: P, output: P) {
+fn new_month<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
     // 1. move file to archive
-    let time_log = TimeLog::from_file(&input).expect(&format!("Couldn't read {}", input.as_ref().display()));
-    let _ = time_log.backup(&input).expect("Couldn't write file");
+    let time_log = TimeLog::from_file(&input)?;
+    let _ = time_log.backup(&input)?;
     // 2. daily log
-    let _ = TimeLog::empty().update().persist(&output).expect("Couldn't write file");
+    let _ = TimeLog::empty().update()?.persist(&output)?;
+    Ok(())
 }
