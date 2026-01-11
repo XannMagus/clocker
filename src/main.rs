@@ -68,7 +68,7 @@ fn main() {
 
 fn log<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
     let time_log = TimeLog::from_file(&input)?;
-    let _ = time_log.update()?.persist(&output)?;
+    time_log.update()?.persist(&output)?;
     Ok(())
 }
 
@@ -76,7 +76,7 @@ fn archive<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
     // 1. daily log
     let time_log = TimeLog::from_file(&input)?;
     // 2. move file to archive
-    let _ = time_log.update()?.backup(&input)?;
+    time_log.update()?.backup(&input)?;
     // 3. init new file with empty TimeLog
     TimeLog::empty().persist(&output)?;
     Ok(())
@@ -85,8 +85,8 @@ fn archive<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
 fn new_month<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
     // 1. move file to archive
     let time_log = TimeLog::from_file(&input)?;
-    let _ = time_log.backup(&input)?;
+    time_log.backup(&input)?;
     // 2. daily log
-    let _ = TimeLog::empty().update()?.persist(&output)?;
+    TimeLog::empty().update()?.persist(&output)?;
     Ok(())
 }

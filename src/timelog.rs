@@ -43,7 +43,6 @@ impl TimeLog {
             match log {
                 Ok(log) => entries.push(log),
                 Err(e) => {
-                    eprintln!("Warning: Skipping malformed CSV record: {}", &e);
                     errors.push(e);
                     continue;
                 }
@@ -70,7 +69,7 @@ impl TimeLog {
     /// Writes the current entries to the given filepath.
     pub fn persist<P: AsRef<Path>>(&self, filepath: P) -> Result<(), ClockerError> {
         let filepath = filepath.as_ref();
-        let file = fs::File::create(filepath).unwrap();
+        let file = fs::File::create(filepath)?;
         let mut writer = csv::WriterBuilder::new().flexible(true).from_writer(file);
         for entry in self.entries.iter() {
             writer.serialize(entry)?;
