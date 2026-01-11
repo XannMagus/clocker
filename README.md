@@ -16,22 +16,53 @@ This builds an optimized release binary and installs it to `~/.cargo/bin/`.
 
 ## Usage
 
+### Logging time
+
 Simply run the program to log the current time:
 
 ```bash
 clocker
+# or explicitly
+clocker log
 ```
 
 This appends the current time to the next available slot in `~/timelog.csv`.
 
-### Custom file paths
+### Archiving
+
+Archive your current timelog and start fresh:
 
 ```bash
-clocker <INPUT_FILE> [OUTPUT_FILE]
+clocker archive
 ```
 
-- `INPUT_FILE` — Path to read existing entries from (default: `~/timelog.csv`)
-- `OUTPUT_FILE` — Path to write updated entries to (default: same as input)
+This will:
+1. Update the current day's entry
+2. Create a backup of the file with a `.bak` extension
+3. Initialize a new empty timelog
+
+### Starting a new month
+
+Move the current timelog to archive without logging the current time:
+
+```bash
+clocker new-month
+```
+
+This will:
+1. Create a backup of the current file
+2. Initialize a new empty timelog with today's entry
+
+### Custom file paths
+
+All commands support custom input and output file paths:
+
+```bash
+clocker -i <INPUT_FILE> -o <OUTPUT_FILE> [COMMAND]
+```
+
+- `-i, --input-file` — Path to read existing entries from (default: `~/timelog.csv`)
+- `-o, --output-file` — Path to write updated entries to (default: same as input)
 
 ### Examples
 
@@ -40,10 +71,13 @@ clocker <INPUT_FILE> [OUTPUT_FILE]
 clocker
 
 # Use a custom file
-clocker ~/work/timelog.csv
+clocker -i ~/work/timelog.csv
 
 # Read from one file, write to another
-clocker ~/work/timelog.csv ~/work/timelog_backup.csv
+clocker -i ~/work/timelog.csv -o ~/work/timelog_new.csv
+
+# Archive with custom file
+clocker -i ~/work/timelog.csv archive
 ```
 
 ## How it works
@@ -59,7 +93,7 @@ When you run `clocker`:
 
 - If today has no entry yet, a new row is created with the current time as Start AM
 - If the current day's row exists, the next empty slot is filled
-- If all slots are filled, no changes are made
+- If all slots are filled, you'll receive an error: "Shift already complete for today."
 
 ## CSV format
 
@@ -72,6 +106,14 @@ date,start_am,end_am,start_pm,end_pm
 ```
 
 Empty fields are left blank when not yet filled.
+
+## Error handling
+
+Clocker provides clear error messages for common issues:
+
+- **Shift already complete** — All four time slots for today are filled
+- **Malformed CSV** — The input file contains invalid data
+- **File errors** — Issues reading or writing files
 
 ## License
 
