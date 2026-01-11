@@ -42,6 +42,16 @@ enum Command {
     Log,
     Archive,
     NewMonth,
+    View {
+        #[command(subcommand)]
+        kind: Option<ViewCommand> 
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum ViewCommand {
+    All,
+    Latest,
 }
 
 /// Entrypoint of the tool
@@ -59,6 +69,10 @@ fn main() {
         Some(Command::Archive) => archive(&input_filename, &output_filename),
         Some(Command::NewMonth) => new_month(&input_filename, &output_filename),
         Some(Command::Log) | None => log(&input_filename, &output_filename),
+        Some(Command::View { kind }) => match kind {
+            Some(ViewCommand::Latest) => show_latest(&input_filename),
+            Some(ViewCommand::All) | None => show_all(&input_filename),
+        }
     };
 
     if let Err(error) = result {
@@ -88,5 +102,17 @@ fn new_month<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
     time_log.backup(&input)?;
     // 2. daily log
     TimeLog::empty().update()?.persist(&output)?;
+    Ok(())
+}
+
+fn show_all<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
+    let time_log = TimeLog::from_file(&input)?;
+    println!("{}", time_log);
+    Ok(())
+}
+
+fn show_latest<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
+    let time_log = TimeLog::from_file(&input)?;
+    println!("{}", time_log.latest_entry().map_or(String::new(), |e| e.to_string()));
     Ok(())
 }

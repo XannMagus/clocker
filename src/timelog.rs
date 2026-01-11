@@ -84,6 +84,11 @@ impl TimeLog {
         Ok(self.apply_action(action))
     }
 
+    /// Returns a copy of the latest entry
+    pub fn latest_entry(&self) -> Option<TimeLogEntry> {
+        self.entries.last().cloned()
+    }
+
     /// Creates a new TimeLog from the given entries. Time and date are set to the current datetime
     fn new(entries: Vec<TimeLogEntry>) -> Self {
         let now = Local::now();
