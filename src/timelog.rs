@@ -30,7 +30,7 @@ impl TimeLog {
     /// Loads entries from the file at the given path.
     pub fn from_file<P: AsRef<Path>>(filepath: P) -> Result<Self, ClockerError> {
         let filepath = filepath.as_ref();
-        if !fs::metadata(&filepath).is_ok() {
+        if !filepath.exists() {
             return Ok(Self::empty());
         }
 
