@@ -4,25 +4,18 @@
 //! to hold the state and implements the main logic of the operations
 //!
 use chrono::{Local, NaiveDate, NaiveTime, Timelike};
-use std::{error::Error, fs, io};
+use std::{fs, path::Path};
 use timelogentry::TimeLogEntry;
 
-mod timelogentry;
+use crate::{error::ClockerError, timelog::timelogentry::DayState};
 
-/// Holds the different legal times of day to log
-#[derive(Debug)]
-enum TimeOfDay {
-    EndAM,
-    StartPM,
-    EndPM,
-}
+mod timelogentry;
 
 /// Describes the possible actions to take based on the current state of the file
 #[derive(Debug)]
 enum UpdateAction {
     NewDay(NaiveDate, NaiveTime),
-    FillSlot(TimeOfDay, NaiveTime),
-    NoChange,
+    FillSlot(NaiveTime),
 }
 
 /// Main state structure. Holds information about the time and the existing log entries
@@ -35,32 +28,48 @@ pub struct TimeLog {
 
 impl TimeLog {
     /// Loads entries from the file at the given path.
-    pub fn from_file(filepath: &String) -> io::Result<Self> {
-        if !fs::metadata(&filepath).is_ok() {
-            eprintln!("Cannot find file {}", filepath);
-            return Ok(Self::new(Vec::new()));
+    pub fn from_file<P: AsRef<Path>>(filepath: P) -> Result<Self, ClockerError> {
+        let filepath = filepath.as_ref();
+        if !filepath.exists() {
+            return Ok(Self::empty());
         }
 
         let file = fs::File::open(filepath)?;
         let mut reader = csv::ReaderBuilder::new().flexible(true).from_reader(file);
 
         let mut entries = Vec::new();
+        let mut errors = Vec::new();
         for log in reader.deserialize() {
             match log {
                 Ok(log) => entries.push(log),
                 Err(e) => {
-                    eprintln!("Warning: Skipping malformed CSV record: {}", e);
+                    errors.push(e);
                     continue;
                 }
             }
         }
 
-        Ok(Self::new(entries))
+        if errors.is_empty() {
+            Ok(Self::new(entries))
+        } else {
+            Err(ClockerError::FileParseError(errors).into())
+        }
+    }
+
+    /// Creates a new empty TimeLog
+    pub fn empty() -> Self {
+        Self::new(Vec::new())
+    }
+
+    pub fn backup<P: AsRef<Path>>(&self, filepath: P) -> Result<(), ClockerError> {
+        let backup_path = filepath.as_ref().with_extension("bak");
+        self.persist(&backup_path)
     }
 
     /// Writes the current entries to the given filepath.
-    pub fn persist(&self, filepath: &String) -> Result<(), Box<dyn Error>> {
-        let file = fs::File::create(filepath).unwrap();
+    pub fn persist<P: AsRef<Path>>(&self, filepath: P) -> Result<(), ClockerError> {
+        let filepath = filepath.as_ref();
+        let file = fs::File::create(filepath)?;
         let mut writer = csv::WriterBuilder::new().flexible(true).from_writer(file);
         for entry in self.entries.iter() {
             writer.serialize(entry)?;
@@ -70,9 +79,9 @@ impl TimeLog {
     }
 
     /// Updates the current entries and returns the result as new TimeLog
-    pub fn update(&self) -> Self {
-        let action = self.determine_action();
-        self.apply_action(action)
+    pub fn update(self) -> Result<Self, ClockerError> {
+        let action = self.determine_action()?;
+        Ok(self.apply_action(action))
     }
 
     /// Creates a new TimeLog from the given entries. Time and date are set to the current datetime
@@ -94,58 +103,31 @@ impl TimeLog {
     }
 
     /// Decides what action is appropriate based on the current state
-    fn determine_action(&self) -> UpdateAction {
+    fn determine_action(&self) -> Result<UpdateAction, ClockerError> {
         match self.entries.last() {
-            None => UpdateAction::NewDay(self.today, self.current_time),
+            None => Ok(UpdateAction::NewDay(self.today, self.current_time)),
             Some(TimeLogEntry { date: d, .. }) if d != &self.today => {
-                UpdateAction::NewDay(self.today, self.current_time)
+                Ok(UpdateAction::NewDay(self.today, self.current_time))
             }
-            Some(last_entry) => {
-                if last_entry.end_am.is_none() {
-                    UpdateAction::FillSlot(TimeOfDay::EndAM, self.current_time)
-                } else if last_entry.start_pm.is_none() {
-                    UpdateAction::FillSlot(TimeOfDay::StartPM, self.current_time)
-                } else if last_entry.end_pm.is_none() {
-                    UpdateAction::FillSlot(TimeOfDay::EndPM, self.current_time)
-                } else {
-                    UpdateAction::NoChange
-                }
-            }
+            Some(last_entry) => match last_entry.state {
+                DayState::DayFinished(_, _, _, _) => Err(ClockerError::ShiftComplete),
+                _ => Ok(UpdateAction::FillSlot(self.current_time)),
+            },
         }
     }
 
     /// Applies the given action and returns the result as a new TimeLog
-    fn apply_action(&self, action: UpdateAction) -> Self {
-        let new_entries = match action {
-            UpdateAction::NoChange => self.entries.clone(),
-            UpdateAction::NewDay(date, time) => self
-                .entries
-                .iter()
-                .cloned()
-                .chain(std::iter::once(TimeLogEntry::new(date, time)))
-                .collect(),
-            UpdateAction::FillSlot(time_of_day, time) => {
-                let mut new_vec = self.entries.clone();
-                let new_entry = new_vec.last_mut().unwrap();
-                match time_of_day {
-                    TimeOfDay::EndAM => {
-                        new_entry.set_end_am(time);
-                    }
-                    TimeOfDay::StartPM => {
-                        new_entry.set_start_pm(time);
-                    }
-                    TimeOfDay::EndPM => {
-                        new_entry.set_end_pm(time);
-                    }
-                }
-                new_vec
+    fn apply_action(mut self, action: UpdateAction) -> Self {
+        match action {
+            UpdateAction::NewDay(date, time) => {
+                self.entries.push(TimeLogEntry::new(date, time));
             }
-        };
-
-        Self {
-            entries: new_entries,
-            today: self.today,
-            current_time: self.current_time,
+            UpdateAction::FillSlot(time) => {
+                if let Some(last_entry) = self.entries.last_mut() {
+                    last_entry.transition(time);
+                }
+            }
         }
+        self
     }
 }
