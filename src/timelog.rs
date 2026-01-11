@@ -4,7 +4,7 @@
 //! to hold the state and implements the main logic of the operations
 //!
 use chrono::{Local, NaiveDate, NaiveTime, Timelike};
-use std::{fs, path::Path};
+use std::{fmt::Display, fs, path::Path};
 use timelogentry::TimeLogEntry;
 
 use crate::{error::ClockerError, timelog::timelogentry::DayState};
@@ -84,6 +84,11 @@ impl TimeLog {
         Ok(self.apply_action(action))
     }
 
+    /// Returns a copy of the latest entry
+    pub fn latest_entry(&self) -> Option<TimeLogEntry> {
+        self.entries.last().cloned()
+    }
+
     /// Creates a new TimeLog from the given entries. Time and date are set to the current datetime
     fn new(entries: Vec<TimeLogEntry>) -> Self {
         let now = Local::now();
@@ -129,5 +134,15 @@ impl TimeLog {
             }
         }
         self
+    }
+}
+
+impl Display for TimeLog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:^14}{:^12}{:^12}{:^12}{:^12}\n", "Date", "Start AM", "End AM", "Start PM", "End PM")?;
+        for entry in self.entries.iter() {
+            write!(f, "{}\n", entry)?;
+        }
+        Ok(())
     }
 }

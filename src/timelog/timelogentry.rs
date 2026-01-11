@@ -1,4 +1,6 @@
 //! Separates the TimeLogEntry struct from the main TimeLog module
+use std::fmt::Display;
+
 use chrono::{NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
 
@@ -92,5 +94,24 @@ impl From<TimeLogEntry> for TimeLogEntryDTO {
             DayState::FreshDay => (),
         }
         dto
+    }
+}
+
+impl From<&TimeLogEntry> for TimeLogEntryDTO {
+    fn from(value: &TimeLogEntry) -> Self {
+        value.clone().into()
+    }
+}
+
+impl Display for TimeLogEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let dto: TimeLogEntryDTO = self.into();
+        write!(f, "{}", dto)
+    }
+}
+
+impl Display for TimeLogEntryDTO {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:^14}{:^12}{:^12}{:^12}{:^12}", self.date.to_string(), self.start_am.map_or(String::new(), |t| t.to_string()), self.end_am.map_or(String::new(), |t| t.to_string()), self.start_pm.map_or(String::new(), |t| t.to_string()), self.end_pm.map_or(String::new(), |t| t.to_string()))
     }
 }

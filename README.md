@@ -28,6 +28,20 @@ clocker log
 
 This appends the current time to the next available slot in `~/timelog.csv`.
 
+### Viewing entries
+
+View your timelog entries:
+
+```bash
+# View all entries
+clocker view
+# or explicitly
+clocker view all
+
+# View only the latest entry
+clocker view latest
+```
+
 ### Archiving
 
 Archive your current timelog and start fresh:
@@ -75,6 +89,9 @@ clocker -i ~/work/timelog.csv
 
 # Read from one file, write to another
 clocker -i ~/work/timelog.csv -o ~/work/timelog_new.csv
+
+# View entries from a specific file
+clocker -i ~/work/timelog.csv view all
 
 # Archive with custom file
 clocker -i ~/work/timelog.csv archive
