@@ -42,6 +42,16 @@ clocker view all
 clocker view latest
 ```
 
+### Creating a snapshot
+
+Create a backup of your current timelog without modifying it:
+
+```bash
+clocker snapshot
+```
+
+This creates a backup file with a `.bak` extension, preserving your current timelog exactly as it is. Useful for manual backups before making changes or for keeping periodic snapshots.
+
 ### Archiving
 
 Archive your current timelog and start fresh:
@@ -89,6 +99,9 @@ clocker -i ~/work/timelog.csv
 
 # Read from one file, write to another
 clocker -i ~/work/timelog.csv -o ~/work/timelog_new.csv
+
+# Create a snapshot of a specific file
+clocker -i ~/work/timelog.csv snapshot
 
 # View entries from a specific file
 clocker -i ~/work/timelog.csv view all
@@ -139,3 +152,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 *This README was generated with the assistance of AI.*
+
