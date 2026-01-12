@@ -42,9 +42,10 @@ enum Command {
     Log,
     Archive,
     NewMonth,
+    Snapshot,
     View {
         #[command(subcommand)]
-        kind: Option<ViewCommand> 
+        kind: Option<ViewCommand>,
     },
 }
 
@@ -68,11 +69,12 @@ fn main() {
     let result = match cli.command {
         Some(Command::Archive) => archive(&input_filename, &output_filename),
         Some(Command::NewMonth) => new_month(&input_filename, &output_filename),
+        Some(Command::Snapshot) => snapshot(&input_filename),
         Some(Command::Log) | None => log(&input_filename, &output_filename),
         Some(Command::View { kind }) => match kind {
             Some(ViewCommand::Latest) => show_latest(&input_filename),
             Some(ViewCommand::All) | None => show_all(&input_filename),
-        }
+        },
     };
 
     if let Err(error) = result {
@@ -81,16 +83,14 @@ fn main() {
 }
 
 fn log<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
-    let time_log = TimeLog::from_file(&input)?;
-    time_log.update()?.persist(&output)?;
+    TimeLog::from_file(&input)?.update()?.persist(&output)?;
     Ok(())
 }
 
 fn archive<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
     // 1. daily log
-    let time_log = TimeLog::from_file(&input)?;
     // 2. move file to archive
-    time_log.update()?.backup(&input)?;
+    TimeLog::from_file(&input)?.update()?.backup(&input)?;
     // 3. init new file with empty TimeLog
     TimeLog::empty().persist(&output)?;
     Ok(())
@@ -98,10 +98,14 @@ fn archive<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
 
 fn new_month<P: AsRef<Path>>(input: P, output: P) -> Result<(), ClockerError> {
     // 1. move file to archive
-    let time_log = TimeLog::from_file(&input)?;
-    time_log.backup(&input)?;
+    TimeLog::from_file(&input)?.backup(&input)?;
     // 2. daily log
     TimeLog::empty().update()?.persist(&output)?;
+    Ok(())
+}
+
+fn snapshot<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
+    TimeLog::from_file(&input)?.backup(&input)?;
     Ok(())
 }
 
@@ -113,6 +117,11 @@ fn show_all<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
 
 fn show_latest<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
     let time_log = TimeLog::from_file(&input)?;
-    println!("{}", time_log.latest_entry().map_or(String::new(), |e| e.to_string()));
+    println!(
+        "{}",
+        time_log
+            .latest_entry()
+            .map_or(String::new(), |e| e.to_string())
+    );
     Ok(())
 }
