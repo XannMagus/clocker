@@ -27,7 +27,7 @@ fn resolve_path(path: &str) -> PathBuf {
 
 /// Input structure to hold parsed parameters from command line
 #[derive(Parser, Debug)]
-#[command(author, version = APP_VERSION, about = "A simple cli clock-in/clock-out utility for CSV files.", long_about = None)]
+#[command(author, version = APP_VERSION, about = "A simple cli clock-in/clock-out utility for CSV files.", long_about = None, infer_subcommands = true)]
 struct Cli {
     #[arg(short, long, default_value = DEFAULT_PATH, global = true)]
     input_file: String,
@@ -39,15 +39,11 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    #[command(alias = "l")]
     Log,
-    #[command(alias = "a")]
     Archive,
-    #[command(alias = "n")]
     NewMonth,
-    #[command(alias = "s")]
     Snapshot,
-    #[command(alias = "v", visible_alias = "show")]
+    #[command(visible_alias = "show")]
     View {
         #[command(subcommand)]
         kind: Option<ViewCommand>,
