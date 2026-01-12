@@ -39,10 +39,15 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    #[command(alias = "l")]
     Log,
+    #[command(alias = "a")]
     Archive,
+    #[command(alias = "n")]
     NewMonth,
+    #[command(alias = "s")]
     Snapshot,
+    #[command(alias = "v", visible_alias = "show")]
     View {
         #[command(subcommand)]
         kind: Option<ViewCommand>,
