@@ -120,9 +120,7 @@ fn show_latest<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
     let time_log = TimeLog::from_file(&input)?;
     println!(
         "{}",
-        time_log
-            .latest_entry()
-            .map_or(String::new(), |e| e.to_string())
+        time_log.only_latest()
     );
     Ok(())
 }
