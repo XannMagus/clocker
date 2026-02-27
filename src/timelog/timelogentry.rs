@@ -4,6 +4,8 @@ use std::fmt::Display;
 use chrono::{NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
 
+use crate::table_view::TableView;
+
 /// Represents the current state of a TimeLogEntry
 #[derive(Debug, Clone, Default)]
 pub enum DayState {
@@ -47,6 +49,10 @@ impl TimeLogEntry {
             }
         };
         self.state = new_state;
+    }
+
+    pub fn as_table<'a>(&'a self) -> TableView<'a, Self> {
+        TableView::new(self)
     }
 }
 
@@ -129,12 +135,28 @@ impl Display for TimeLogEntryDTO {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "\u{2502}{:^14}\u{2502}{:^12}\u{2502}{:^12}\u{2502}{:^12}\u{2502}{:^12}\u{2502}",
+            "{:^14}{:^12}{:^12}{:^12}{:^12}",
             self.date.to_string(),
             self.start_am.map_or(String::new(), |t| t.to_string()),
             self.end_am.map_or(String::new(), |t| t.to_string()),
             self.start_pm.map_or(String::new(), |t| t.to_string()),
             self.end_pm.map_or(String::new(), |t| t.to_string())
+        )
+    }
+}
+
+impl<'a> Display for TableView<'a, TimeLogEntry> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let dto: TimeLogEntryDTO = self.item.into();
+
+        write!(
+            f,
+            "\u{2502}{:^14}\u{2502}{:^12}\u{2502}{:^12}\u{2502}{:^12}\u{2502}{:^12}\u{2502}",
+            dto.date.to_string(),
+            dto.start_am.map_or(String::new(), |t| t.to_string()),
+            dto.end_am.map_or(String::new(), |t| t.to_string()),
+            dto.start_pm.map_or(String::new(), |t| t.to_string()),
+            dto.end_pm.map_or(String::new(), |t| t.to_string())
         )
     }
 }

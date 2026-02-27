@@ -14,6 +14,7 @@ use crate::timelog::TimeLog;
 
 mod error;
 mod timelog;
+mod table_view;
 
 /// Version of the app as defined in the Cargo.toml file
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -112,15 +113,12 @@ fn snapshot<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
 
 fn show_all<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
     let time_log = TimeLog::from_file(&input)?;
-    println!("{}", time_log);
+    println!("{}", time_log.as_table());
     Ok(())
 }
 
 fn show_latest<P: AsRef<Path>>(input: P) -> Result<(), ClockerError> {
     let time_log = TimeLog::from_file(&input)?;
-    println!(
-        "{}",
-        time_log.only_latest()
-    );
+    println!("{}", time_log.only_latest().as_table());
     Ok(())
 }
