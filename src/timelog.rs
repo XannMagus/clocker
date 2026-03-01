@@ -7,7 +7,7 @@ use chrono::{Local, NaiveDate, NaiveTime, Timelike};
 use std::{fmt::Display, fs, path::Path};
 use timelogentry::TimeLogEntry;
 
-use crate::{error::ClockerError, timelog::timelogentry::DayState};
+use crate::{error::ClockerError, table_view::TableView, timelog::timelogentry::DayState};
 
 mod timelogentry;
 
@@ -19,7 +19,7 @@ enum UpdateAction {
 }
 
 /// Main state structure. Holds information about the time and the existing log entries
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TimeLog {
     entries: Vec<TimeLogEntry>,
     today: NaiveDate,
@@ -84,9 +84,17 @@ impl TimeLog {
         Ok(self.apply_action(action))
     }
 
-    /// Returns a copy of the latest entry
-    pub fn latest_entry(&self) -> Option<TimeLogEntry> {
-        self.entries.last().cloned()
+    /// Returns a new Timelog with only the latest entry
+    pub fn only_latest(self) -> TimeLog {
+        Self {
+            entries: self.entries.last().cloned().into_iter().collect(),
+            today: self.today,
+            current_time: self.current_time,
+        }
+    }
+
+    pub fn as_table<'a>(&'a self) -> TableView<'a, Self> {
+        TableView::new(self)
     }
 
     /// Creates a new TimeLog from the given entries. Time and date are set to the current datetime
@@ -144,5 +152,46 @@ impl Display for TimeLog {
             write!(f, "{}\n", entry)?;
         }
         Ok(())
+    }
+}
+
+impl<'a> Display for TableView<'a, TimeLog> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "\u{256D}{}\u{252C}{}\u{252C}{}\u{252C}{}\u{252C}{}\u{256E}\n",
+            "\u{2500}".repeat(14),
+            "\u{2500}".repeat(12),
+            "\u{2500}".repeat(12),
+            "\u{2500}".repeat(12),
+            "\u{2500}".repeat(12)
+        )?;
+        write!(
+            f,
+            "\u{2502}{:^14}\u{2502}{:^12}\u{2502}{:^12}\u{2502}{:^12}\u{2502}{:^12}\u{2502}\n",
+            "Date", "Start AM", "End AM", "Start PM", "End PM"
+        )?;
+        for entry in self.item.entries.iter() {
+            let entry_table = entry.as_table();
+            write!(
+                f,
+                "\u{251C}{}\u{253C}{}\u{253C}{}\u{253C}{}\u{253C}{}\u{2524}\n",
+                "\u{2500}".repeat(14),
+                "\u{2500}".repeat(12),
+                "\u{2500}".repeat(12),
+                "\u{2500}".repeat(12),
+                "\u{2500}".repeat(12)
+            )?;
+            write!(f, "{}\n", entry_table)?;
+        }
+        write!(
+            f,
+            "\u{2570}{}\u{2534}{}\u{2534}{}\u{2534}{}\u{2534}{}\u{256F}\n",
+            "\u{2500}".repeat(14),
+            "\u{2500}".repeat(12),
+            "\u{2500}".repeat(12),
+            "\u{2500}".repeat(12),
+            "\u{2500}".repeat(12)
+        )
     }
 }
